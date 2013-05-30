@@ -9,7 +9,13 @@ type DWORD uint64
 
 const GP = 28
 const SP = 29
-const STATE_STOPPED, STATE_RUNNING, STATE_PAUSED = 0, 1, 2
+
+// CPU status flags.
+const (
+	STATE_STOPPED = iota
+	STATE_RUNNING
+	STATE_PAUSED
+)
 
 type CPU struct {
 	GPR, FP_GPR, CP0    []DWORD
@@ -64,15 +70,16 @@ func (cpu *CPU) Resume() {
 func (cpu *CPU) mainLoop() {
 	cpu.state = STATE_RUNNING
 	log.Println("Entering main loop!")
-	tick := time.Tick(time.Second / 93750000)
+	ticker := time.NewTicker(time.Second / 93750000)
+	tick := ticker.C
 	for {
-		log.Println("Entering main loop2!")
 		select {
 		case <-cpu.pause:
 			cpu.state = STATE_PAUSED
 			<-cpu.resume
 			cpu.state = STATE_RUNNING
 		case <-cpu.kill:
+			ticker.Stop()
 			cpu.state = STATE_STOPPED
 			return
 		case <-tick:
@@ -131,6 +138,11 @@ func (cpu *CPU) ResetCPU() {
 	cpu.Fetch()
 }
 
+// General purpose register friendly names.
 var GPR_NAMES = []string{"r0", "at", "v0", "v1", "a0", "a1", "a2", "a3", "t0", "t1", "t2", "t3", "t4", "t5", "t6", "t7", "s0", "s1", "s2", "s3", "s4", "s5", "s6", "s7", "t8", "t9", "k0", "k1", "gp", "sp", "s8", "ra"}
+
+// Floating point register friendly names.
 var FPR_Name = []string{"f0", "f1", "f2", "f3", "f4", "f5", "f6", "f7", "f8", "f9", "f10", "f11", "f12", "f13", "f14", "f15", "f16", "f17", "f18", "f19", "f20", "f21", "f22", "f23", "f24", "f25", "f26", "f27", "f28", "f29", "f30", "f31"}
+
+// Co processor register friendly names.
 var Cop0_Name = []string{"Index", "Random", "EntryLo0", "EntryLo1", "Context", "PageMask", "Wired", "", "BadVAddr", "Count", "EntryHi", "Compare", "Status", "Cause", "EPC", "PRId", "Config", "LLAddr", "WatchLo", "WatchHi", "XContext", "", "", "", "", "", "ECC", "CacheErr", "TagLo", "TagHi", "ErrEPC", ""}

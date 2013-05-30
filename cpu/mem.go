@@ -1,5 +1,6 @@
 package cpu
 
+// Main memory bank.
 type Memory [0x8000]byte
 
 // Store word stores a word to the memory.
