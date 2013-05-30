@@ -1,6 +1,7 @@
 package cpu
 
 import "log"
+import "time"
 
 type HWORD uint16
 type WORD uint32
@@ -8,20 +9,29 @@ type DWORD uint64
 
 const GP = 28
 const SP = 29
+const STATE_STOPPED, STATE_RUNNING, STATE_PAUSED = 0, 1, 2
 
 type CPU struct {
-	GPR, FP_GPR, CP0   []DWORD
-	Mem                *Memory
-	PC, MultHI, MultLO DWORD
-	nextInstr          Instruction
+	GPR, FP_GPR, CP0    []DWORD
+	Mem                 *Memory
+	PC, MultHI, MultLO  DWORD
+	nextInstr           Instruction
+	state               int
+	pause, resume, kill chan byte
 }
 
 func NewCPU() *CPU {
 	cpu := new(CPU)
+	cpu.state = STATE_STOPPED
+
 	cpu.GPR = make([]DWORD, 32)
 	cpu.FP_GPR = make([]DWORD, 32)
 	cpu.CP0 = make([]DWORD, 33)
 	cpu.Mem = new(Memory)
+
+	cpu.kill = make(chan byte)
+	cpu.resume = make(chan byte)
+	cpu.pause = make(chan byte)
 
 	cpu.ResetCPU()
 	return cpu
@@ -35,6 +45,47 @@ func (cpu *CPU) Tick() {
 	cpu.Fetch()
 }
 
+func (cpu *CPU) Start() {
+	cpu.state = STATE_RUNNING
+	log.Println("Starting cpu!")
+	go cpu.mainLoop()
+}
+
+func (cpu *CPU) Pause() {
+	log.Println("Pausing cpu!")
+	cpu.pause <- 0
+}
+
+func (cpu *CPU) Resume() {
+	log.Println("Resuming cpu!")
+	cpu.resume <- 0
+}
+
+func (cpu *CPU) mainLoop() {
+	cpu.state = STATE_RUNNING
+	log.Println("Entering main loop!")
+	tick := time.Tick(time.Second / 93750000)
+	for {
+		log.Println("Entering main loop2!")
+		select {
+		case <-cpu.pause:
+			cpu.state = STATE_PAUSED
+			<-cpu.resume
+			cpu.state = STATE_RUNNING
+		case <-cpu.kill:
+			cpu.state = STATE_STOPPED
+			return
+		case <-tick:
+			log.Printf("CP: %v\n", cpu.PC)
+			cpu.Tick()
+		}
+	}
+}
+
+func (cpu *CPU) State() int {
+	return cpu.state
+}
+
 func (cpu *CPU) Execute(i Instruction) {
 	op := i.OP()
 	log.Printf("Executing: %v", i)
@@ -46,11 +97,28 @@ func (cpu *CPU) Execute(i Instruction) {
 	}
 }
 
+func (cpu *CPU) Kill() {
+	log.Println("Killing cpu!")
+	cpu.kill <- 0
+}
+
 func (cpu *CPU) Fetch() {
 	cpu.nextInstr = Instruction(cpu.Mem.LoadWord(cpu.PC))
 }
 
 func (cpu *CPU) ResetCPU() {
+	if cpu.state != STATE_STOPPED {
+		if cpu.state == STATE_PAUSED {
+			cpu.Resume()
+		}
+		cpu.Kill()
+	}
+
+	// wait for the cpu to finish...
+	for cpu.state != STATE_STOPPED {
+		time.Sleep(100 * time.Millisecond)
+	}
+
 	cpu.PC = 0x0
 
 	for i, _ := range cpu.GPR {

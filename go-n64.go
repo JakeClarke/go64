@@ -1,19 +1,16 @@
 package main
 
 import "fmt"
+import "time"
 import pcpu "go64/cpu"
 
 func main() {
 	fmt.Println("Test test")
 	cpu := pcpu.NewCPU()
 	fmt.Printf("CP: %v\n", cpu.PC)
-	cpu.Tick()
-	fmt.Printf("CP: %v\n", cpu.PC)
-	fmt.Println("Registers:")
-
-	for i, _ := range cpu.GPR {
-		fmt.Printf("%s: %v\n", pcpu.GPR_NAMES[i], cpu.GPR[i])
+	cpu.Start()
+	for cpu.State() != 0 {
+		time.Sleep(100 * time.Millisecond)
 	}
 
-	fmt.Printf("CP: %+v\n", cpu)
 }
