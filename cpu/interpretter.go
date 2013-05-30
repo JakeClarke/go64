@@ -11,12 +11,16 @@ const SPEC_ADDU = 0x20
 
 func init() {
 	OpTable[0] = opSpecial
+
 	OpTable[0x2] = opJump
 	OpTable[0x3] = opJal
 	OpTable[0x4] = opBeq
 	OpTable[0x5] = opBne
 	OpTable[0x8] = opAddi
 	OpTable[0x9] = opAddiU
+	OpTable[0xA] = opSlti
+	OpTable[0xB] = opSltiU
+
 	OpTable[0xF] = opLoadUpperI
 
 	OpTable[0xc] = opAndi
@@ -102,6 +106,22 @@ func opLoadUpperI(i Instruction, cpu *CPU) {
 
 func opOrI(i Instruction, cpu *CPU) {
 	cpu.GPR[i.RT()] = cpu.GPR[i.RS()] | DWORD(zeroExtImm(i))
+}
+
+func opSlti(i Instruction, cpu *CPU) {
+	if int64(cpu.GPR[i.RS()]) < int64(i.Immediate()) {
+		cpu.GPR[i.RT()] = 1
+	} else {
+		cpu.GPR[i.RT()] = 0
+	}
+}
+
+func opSltiU(i Instruction, cpu *CPU) {
+	if cpu.GPR[i.RS()] < DWORD(i.Immediate()) {
+		cpu.GPR[i.RT()] = 1
+	} else {
+		cpu.GPR[i.RT()] = 0
+	}
 }
 
 // util ops

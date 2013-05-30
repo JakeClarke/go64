@@ -7,6 +7,13 @@ func init() {
 	SpecOpTable[0x02] = specOpSrl
 	SpecOpTable[0x08] = specOpJR
 
+	SpecOpTable[0x10] = specOpMfhi
+
+	SpecOpTable[0x12] = specOpMflo
+
+	SpecOpTable[0x18] = specOpMult
+	SpecOpTable[0x19] = specOpMultU
+
 	SpecOpTable[0x20] = specOpAdd
 	SpecOpTable[0x21] = specOpAddU
 
@@ -60,4 +67,24 @@ func specOpSll(i Instruction, cpu *CPU) {
 
 func specOpSrl(i Instruction, cpu *CPU) {
 	cpu.GPR[i.RD()] = cpu.GPR[i.RT()] >> i.Shamt()
+}
+
+func specOpMfhi(i Instruction, cpu *CPU) {
+	cpu.GPR[i.RD()] = cpu.MultHI
+}
+
+func specOpMflo(i Instruction, cpu *CPU) {
+	cpu.GPR[i.RD()] = cpu.MultLO
+}
+
+func specOpMult(i Instruction, cpu *CPU) {
+	res := int64(cpu.GPR[i.RS()]) * int64(cpu.GPR[i.RT()])
+	cpu.MultHI = DWORD(res >> 32)
+	cpu.MultLO = DWORD(res & 0xFFFFFFFF)
+}
+
+func specOpMultU(i Instruction, cpu *CPU) {
+	res := cpu.GPR[i.RS()] * cpu.GPR[i.RT()]
+	cpu.MultHI = res >> 32
+	cpu.MultLO = res & 0xFFFFFFFF
 }
