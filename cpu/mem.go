@@ -1,4 +1,4 @@
-package main
+package cpu
 
 type Memory [0x8000]byte
 

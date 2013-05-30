@@ -1,4 +1,4 @@
-package main
+package cpu
 
 var SpecOpTable [0x3F]Operation
 

@@ -1,4 +1,4 @@
-package main
+package cpu
 
 type Instruction WORD
 
